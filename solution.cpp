@@ -120,9 +120,12 @@ void clientThreadFunction(
   while (!stopExecution) {
     {
       std::lock_guard<std::mutex> lock(mutex);
+      // Copy the data into a temporary map to avoid keeping the lock during
+      // I/O.
       temporaryMap = objectMap;
     }
 
+    // Output preamble and data.
     const uint32_t fe00{0xFE00};
     const long unsigned int mapSize{temporaryMap.size()};
     std::cout.write(reinterpret_cast<const char *>(&fe00), 4);
@@ -131,6 +134,7 @@ void clientThreadFunction(
       it->second.outputObjectRepresentation();
     std::cout.flush();
 
+    // Wait.
     const auto currentTime = std::chrono::steady_clock::now();
     // This truncates (i.e. floors) the time difference to the nearest
     // millisecond.
@@ -139,8 +143,11 @@ void clientThreadFunction(
         currentTime - referenceTime
       )
         .count();
+    // The time between updates is 5 / 3 seconds, we denote 3 updates (5000 ms)
+    // a cycle.
     const uint64_t currentCycle = millisecondsSinceReferenceTime / 5000;
     const int timeWithinCycle = millisecondsSinceReferenceTime % 5000;
+    // The timing will not be perfect for the intra-cycle outputs.
     const int padding =
       (timeWithinCycle < 1667)
         ? 1667
@@ -154,6 +161,7 @@ void clientThreadFunction(
 }
 
 int64_t getIntegerValueFromKeyValueString(const std::string &key_value_string) {
+  // We disregard the key names and rely on correct ordering.
   return std::stoll(key_value_string.substr(
     key_value_string.find("=") + 1, key_value_string.length()
   ));
@@ -171,6 +179,8 @@ Object objectFromString(std::string &keyValuePairsString) {
     }
     values.push_back(getIntegerValueFromKeyValueString(keyValuePairsString));
 
+    // Note that an exception is not necessarily thrown if the server sends more
+    // than 4 key-value pairs.
     return Object(values[0], values[1], values[2], values[3]);
   } catch (const std::exception &e) {
     throw ObjectParsingException(e.what());
