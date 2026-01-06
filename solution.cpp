@@ -160,11 +160,11 @@ void clientThreadFunction(
   }
 }
 
-int64_t getIntegerValueFromKeyValueString(const std::string &key_value_string) {
+int64_t getIntegerValueFromKeyValueString(const std::string &keyValueString) {
   // We disregard the key names and rely on correct ordering.
-  return std::stoll(key_value_string.substr(
-    key_value_string.find("=") + 1, key_value_string.length()
-  ));
+  return std::stoll(
+    keyValueString.substr(keyValueString.find("=") + 1, keyValueString.length())
+  );
 }
 
 Object objectFromString(std::string &keyValuePairsString) {
